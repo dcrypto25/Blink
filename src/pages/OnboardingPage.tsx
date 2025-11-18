@@ -10,15 +10,69 @@ export default function OnboardingPage() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showFunding, setShowFunding] = useState(false)
 
   const hasExistingWallet = hasPasskeyWallet()
   const storedUsername = getStoredUsername()
 
-  const handleCreateWallet = async () => {
+  const handleSignIn = async () => {
+    if (!password.trim()) {
+      setError('Please enter your password')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+
+    try {
+      // Try password-based authentication first (simpler)
+      const storedWallet = localStorage.getItem('blink-passkey-wallet')
+      const storedPassword = localStorage.getItem('blink-password')
+
+      if (storedWallet && storedPassword) {
+        if (password === storedPassword) {
+          const credential = JSON.parse(storedWallet)
+          setPublicKey(credential.publicKey)
+          setAuthenticated(true)
+          await refreshBalances()
+          navigate('/trade')
+          return
+        } else {
+          setError('Incorrect password')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // Fallback to passkey authentication
+      const result = await authenticateWithPasskey()
+
+      if (result.success && result.publicKey) {
+        setPublicKey(result.publicKey)
+        setAuthenticated(true)
+        await refreshBalances()
+        navigate('/trade')
+      } else {
+        setError('Authentication failed. Please try again.')
+      }
+    } catch (err) {
+      setError('Failed to authenticate. Please try again.')
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePasswordSignup = async () => {
     if (!username.trim()) {
       setError('Please enter a username')
+      return
+    }
+
+    if (!password.trim() || password.length < 6) {
+      setError('Password must be at least 6 characters')
       return
     }
 
@@ -35,6 +89,9 @@ export default function OnboardingPage() {
       const result = await createPasskeyWallet(sanitizedUsername)
 
       if (result.success && result.publicKey) {
+        // Store password for later authentication
+        localStorage.setItem('blink-password', password)
+
         setPublicKey(result.publicKey)
         setAuthenticated(true)
         await refreshBalances()
@@ -43,30 +100,7 @@ export default function OnboardingPage() {
         setError('Failed to create wallet. Please try again.')
       }
     } catch (err) {
-      setError('Failed to create wallet. Make sure your device supports passkeys.')
-      console.error(err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleSignIn = async () => {
-    setIsLoading(true)
-    setError('')
-
-    try {
-      const result = await authenticateWithPasskey()
-
-      if (result.success && result.publicKey) {
-        setPublicKey(result.publicKey)
-        setAuthenticated(true)
-        await refreshBalances()
-        navigate('/trade')
-      } else {
-        setError('Authentication failed. Please try again.')
-      }
-    } catch (err) {
-      setError('Failed to authenticate. Please try again.')
+      setError('Failed to create wallet.')
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -284,6 +318,23 @@ export default function OnboardingPage() {
                 Sign in as <span className="text-blink-400">{storedUsername}</span>
               </p>
 
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blink-500 focus:border-transparent"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
               <button
                 onClick={handleSignIn}
                 disabled={isLoading}
@@ -295,23 +346,32 @@ export default function OnboardingPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Authenticating...
+                    Signing in...
                   </span>
                 ) : (
-                  '🔐 Sign In with Passkey'
+                  '🔐 Sign In'
                 )}
               </button>
 
-              <p className="text-center text-gray-500 text-sm mt-4">
-                Takes ~3 seconds
-              </p>
+              <button
+                onClick={() => {
+                  // Clear wallet and start fresh
+                  localStorage.removeItem('blink-passkey-wallet')
+                  localStorage.removeItem('blink-username')
+                  localStorage.removeItem('blink-password')
+                  window.location.reload()
+                }}
+                className="w-full mt-4 text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                Create new wallet instead
+              </button>
             </div>
           ) : (
             // Create Wallet Flow
             <div>
               <h2 className="text-2xl font-bold text-white mb-2">Get started in 8 seconds</h2>
               <p className="text-gray-400 mb-6">
-                Create your wallet with just a username. No seed phrases to write down.
+                Create your wallet with a username and password. No seed phrases.
               </p>
 
               <div className="space-y-4">
@@ -325,14 +385,31 @@ export default function OnboardingPage() {
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="satoshi"
                     className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blink-500 focus:border-transparent"
-                    onKeyDown={(e) => e.key === 'Enter' && handleCreateWallet()}
                     disabled={isLoading}
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Choose a password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blink-500 focus:border-transparent"
+                    onKeyDown={(e) => e.key === 'Enter' && handlePasswordSignup()}
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Minimum 6 characters
+                  </p>
+                </div>
+
                 <button
-                  onClick={handleCreateWallet}
-                  disabled={isLoading || !username.trim()}
+                  onClick={handlePasswordSignup}
+                  disabled={isLoading || !username.trim() || !password.trim()}
                   className="w-full bg-gradient-to-r from-blink-500 to-blink-600 hover:from-blink-600 hover:to-blink-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed glow"
                 >
                   {isLoading ? (
@@ -351,7 +428,7 @@ export default function OnboardingPage() {
                 <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
                   <span>✓ No seed phrases</span>
                   <span>•</span>
-                  <span>✓ Biometric security</span>
+                  <span>✓ Password protected</span>
                   <span>•</span>
                   <span>✓ Social recovery</span>
                 </div>
