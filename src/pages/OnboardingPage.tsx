@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWalletStore } from '../store/walletStore'
 import { createPasskeyWallet, authenticateWithPasskey, hasPasskeyWallet, getStoredUsername } from '../services/passkeyWallet'
+import { sanitizeUsername } from '../utils/validation'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
@@ -20,11 +21,17 @@ export default function OnboardingPage() {
       return
     }
 
+    const sanitizedUsername = sanitizeUsername(username)
+    if (sanitizedUsername.length < 2) {
+      setError('Username must be at least 2 characters')
+      return
+    }
+
     setIsLoading(true)
     setError('')
 
     try {
-      const result = await createPasskeyWallet(username)
+      const result = await createPasskeyWallet(sanitizedUsername)
 
       if (result.success && result.publicKey) {
         setPublicKey(result.publicKey)

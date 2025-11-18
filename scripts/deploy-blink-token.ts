@@ -27,8 +27,11 @@ import {
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddress,
   createMintToInstruction,
+  AuthorityType,
+  setAuthority,
 } from '@solana/spl-token'
 import fs from 'fs'
+import { chmod } from 'fs/promises'
 import path from 'path'
 
 // Token Configuration
@@ -66,6 +69,14 @@ async function deployBlinkToken() {
     console.log('🔑 Generating new keypair...')
     payer = Keypair.generate()
     fs.writeFileSync(keypairPath, JSON.stringify(Array.from(payer.secretKey)))
+
+    // Set secure file permissions (owner read/write only)
+    try {
+      await chmod(keypairPath, 0o600)
+      console.log('✅ Keypair saved with secure permissions (0600)')
+    } catch (error) {
+      console.warn('⚠️  Could not set file permissions (Windows?)')
+    }
     console.log('⚠️  Keypair saved to .keypair.json - KEEP THIS SAFE!')
 
     // Request airdrop for devnet
@@ -100,13 +111,14 @@ async function deployBlinkToken() {
   const mint = await createMint(
     connection,
     payer,
-    payer.publicKey, // mint authority
-    payer.publicKey, // freeze authority
+    payer.publicKey, // mint authority (will be removed after initial mint)
+    null,           // NO freeze authority for decentralization
     TOKEN_CONFIG.decimals,
     mintKeypair
   )
 
   console.log(`✅ Token Mint Created: ${mint.toBase58()}`)
+  console.log(`🔓 No freeze authority (fully decentralized)`)
 
   // Create associated token account for the deployer
   console.log('\n💳 Creating associated token account...')

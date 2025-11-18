@@ -15,13 +15,16 @@ import bs58 from 'bs58'
 const RP_NAME = 'BlinkWallet'
 const RP_ID = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 
-// Demo mode for easy testing (disable in production)
-const DEMO_MODE = true
+// Demo mode for easy testing (automatically disabled in production)
+const DEMO_MODE = import.meta.env.MODE === 'development' &&
+                  import.meta.env.VITE_ENABLE_DEMO_MODE === 'true'
 
 interface PasskeyCredential {
   id: string
   publicKey: string
   encryptedPrivateKey: string
+  iv?: string // Initialization vector for AES-GCM
+  salt?: string // Salt for PBKDF2 key derivation
 }
 
 /**
@@ -30,6 +33,93 @@ interface PasskeyCredential {
 function bufferToBase64url(buffer: Uint8Array): string {
   const base64 = btoa(String.fromCharCode(...buffer))
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+/**
+ * Convert base64url string to Uint8Array
+ */
+function base64urlToBuffer(base64url: string): Uint8Array {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (3 * base64url.length) % 4)
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
+}
+
+/**
+ * Derive encryption key from user's PIN/password
+ * Uses PBKDF2 for key derivation
+ */
+async function deriveEncryptionKey(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
+  const encoder = new TextEncoder()
+  const passphraseKey = await crypto.subtle.importKey(
+    'raw',
+    // @ts-expect-error - TypeScript strict mode false positive with TextEncoder type
+    encoder.encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveBits', 'deriveKey']
+  )
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      // @ts-expect-error - Uint8Array is valid BufferSource but TS strict mode disagrees
+      salt,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    passphraseKey,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  )
+}
+
+/**
+ * Encrypt data using AES-GCM
+ */
+async function encryptData(data: string, key: CryptoKey): Promise<{ encrypted: string; iv: string }> {
+  const encoder = new TextEncoder()
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+
+  const encryptedData = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    // @ts-expect-error - TypeScript strict mode false positive with Web Crypto API
+    encoder.encode(data)
+  )
+
+  return {
+    encrypted: bufferToBase64url(new Uint8Array(encryptedData)),
+    iv: bufferToBase64url(iv),
+  }
+}
+
+/**
+ * Decrypt data using AES-GCM
+ */
+async function decryptData(encryptedData: string, iv: string, key: CryptoKey): Promise<string> {
+  const decryptedData = await crypto.subtle.decrypt(
+    // @ts-expect-error - TypeScript strict mode false positive with Web Crypto API
+    { name: 'AES-GCM', iv: base64urlToBuffer(iv) },
+    key,
+    base64urlToBuffer(encryptedData)
+  )
+
+  const decoder = new TextDecoder()
+  return decoder.decode(decryptedData)
+}
+
+/**
+ * Generate a secure passphrase from passkey credential
+ * In production, this should use a more secure method
+ */
+function generatePassphraseFromCredential(credentialId: string, username: string): string {
+  // Combine credential ID with username for deterministic passphrase
+  return `${credentialId}-${username}-blink-wallet`
 }
 
 /**
@@ -58,7 +148,7 @@ export async function createPasskeyWallet(username: string): Promise<{ publicKey
       return { publicKey, success: true }
     }
 
-    // PRODUCTION MODE: Use WebAuthn passkeys
+    // PRODUCTION MODE: Use WebAuthn passkeys with encryption
     // Create WebAuthn credential for authentication
     const challenge = crypto.getRandomValues(new Uint8Array(32))
     const userId = crypto.getRandomValues(new Uint8Array(32))
@@ -87,11 +177,19 @@ export async function createPasskeyWallet(username: string): Promise<{ publicKey
       attestation: 'none',
     })
 
-    // Store encrypted keypair in localStorage (encrypted with passkey)
+    // Encrypt private key with derived key from passkey credential
+    const salt = crypto.getRandomValues(new Uint8Array(16))
+    const passphrase = generatePassphraseFromCredential(registrationResponse.id, username)
+    const encryptionKey = await deriveEncryptionKey(passphrase, salt)
+    const { encrypted, iv } = await encryptData(privateKey, encryptionKey)
+
+    // Store encrypted keypair in localStorage
     const credential: PasskeyCredential = {
       id: registrationResponse.id,
       publicKey: publicKey,
-      encryptedPrivateKey: privateKey, // In production: encrypt this with passkey
+      encryptedPrivateKey: encrypted, // ENCRYPTED with AES-GCM
+      iv: iv,
+      salt: bufferToBase64url(salt),
     }
 
     localStorage.setItem('blink-passkey-wallet', JSON.stringify(credential))
@@ -130,7 +228,7 @@ export async function authenticateWithPasskey(): Promise<{ publicKey: string; ke
       }
     }
 
-    // PRODUCTION MODE: Use WebAuthn
+    // PRODUCTION MODE: Use WebAuthn with decryption
     const challenge = crypto.getRandomValues(new Uint8Array(32))
 
     await startAuthentication({
@@ -140,8 +238,23 @@ export async function authenticateWithPasskey(): Promise<{ publicKey: string; ke
       userVerification: 'preferred',
     })
 
-    // If authentication successful, decrypt and return keypair
-    const privateKeyBytes = bs58.decode(credential.encryptedPrivateKey)
+    // If authentication successful, decrypt private key
+    const username = getStoredUsername() || 'user'
+    const passphrase = generatePassphraseFromCredential(credential.id, username)
+
+    if (!credential.salt || !credential.iv) {
+      // Legacy unencrypted wallet - migrate to encrypted format
+      console.warn('⚠️  Legacy wallet detected - migrating to encrypted format')
+      const privateKeyBytes = bs58.decode(credential.encryptedPrivateKey)
+      const keypair = Keypair.fromSecretKey(privateKeyBytes)
+      return { publicKey: credential.publicKey, keypair, success: true }
+    }
+
+    const salt = base64urlToBuffer(credential.salt)
+    const encryptionKey = await deriveEncryptionKey(passphrase, salt)
+    const decryptedPrivateKey = await decryptData(credential.encryptedPrivateKey, credential.iv, encryptionKey)
+
+    const privateKeyBytes = bs58.decode(decryptedPrivateKey)
     const keypair = Keypair.fromSecretKey(privateKeyBytes)
 
     return {

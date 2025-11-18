@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Modal from './Modal'
 import { useWalletStore } from '../store/walletStore'
+import { isValidSolanaAddress, isValidAmount, RateLimiter } from '../utils/validation'
 
 interface SendModalProps {
   isOpen: boolean
@@ -15,27 +16,66 @@ export default function SendModal({ isOpen, onClose, onSuccess, onError }: SendM
   const [amount, setAmount] = useState('')
   const [isSending, setIsSending] = useState(false)
 
+  // Rate limiter: max 1 transaction every 2 seconds
+  const rateLimiter = useMemo(() => new RateLimiter(2000), [])
+
   const handleSend = async () => {
+    // Validation checks
     if (!recipient || !amount) {
       onError('Please fill in all fields')
       return
     }
 
-    if (parseFloat(amount) > balance) {
+    if (!isValidSolanaAddress(recipient)) {
+      onError('Invalid Solana address')
+      return
+    }
+
+    if (!isValidAmount(amount, 9)) {
+      onError('Invalid amount (max 9 decimal places)')
+      return
+    }
+
+    const amountNum = parseFloat(amount)
+    if (amountNum > balance) {
       onError('Insufficient balance')
+      return
+    }
+
+    // Minimum transaction amount (avoid dust)
+    if (amountNum < 0.000001) {
+      onError('Amount too small (minimum: 0.000001 SOL)')
+      return
+    }
+
+    // Rate limiting
+    if (!rateLimiter.canProceed()) {
+      onError('Please wait before sending another transaction')
       return
     }
 
     setIsSending(true)
 
-    // TODO: Implement actual send transaction
-    setTimeout(() => {
+    try {
+      // TODO: Implement actual send transaction with simulation
+      // const transaction = await createTransferTransaction(recipient, amountNum)
+      // const simulation = await connection.simulateTransaction(transaction)
+      // if (simulation.value.err) {
+      //   throw new Error('Transaction simulation failed')
+      // }
+      // const signature = await sendTransaction(transaction)
+
+      setTimeout(() => {
+        setIsSending(false)
+        onSuccess(`Successfully sent ${amount} SOL to ${recipient.slice(0, 8)}...`)
+        setRecipient('')
+        setAmount('')
+        onClose()
+      }, 2000)
+    } catch (error) {
       setIsSending(false)
-      onSuccess(`Successfully sent ${amount} SOL to ${recipient.slice(0, 8)}...`)
-      setRecipient('')
-      setAmount('')
-      onClose()
-    }, 2000)
+      onError(error instanceof Error ? error.message : 'Transaction failed')
+    }
   }
 
   return (
