@@ -1,5 +1,6 @@
 import Modal from './Modal'
 import { useWalletStore } from '../store/walletStore'
+import { useNavigate } from 'react-router-dom'
 
 interface FundingModalProps {
   isOpen: boolean
@@ -8,8 +9,30 @@ interface FundingModalProps {
 
 export default function FundingModal({ isOpen, onClose }: FundingModalProps) {
   const { publicKey } = useWalletStore()
+  const navigate = useNavigate()
 
-  if (!publicKey) return null
+  if (!publicKey) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Create a Wallet First">
+        <div className="text-center py-8">
+          <div className="text-6xl mb-4">💰</div>
+          <h3 className="text-xl font-semibold text-white mb-3">No Wallet Yet</h3>
+          <p className="text-gray-400 mb-6">
+            You need to create a wallet before you can fund it. It only takes 8 seconds!
+          </p>
+          <button
+            onClick={() => {
+              onClose()
+              navigate('/onboard')
+            }}
+            className="bg-gradient-to-r from-blink-500 to-blink-600 hover:from-blink-600 hover:to-blink-700 text-white font-semibold py-3 px-8 rounded-lg transition-all"
+          >
+            Create Wallet Now
+          </button>
+        </div>
+      </Modal>
+    )
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Fund Your Wallet">
