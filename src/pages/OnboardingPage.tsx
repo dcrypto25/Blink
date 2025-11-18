@@ -84,6 +84,25 @@ export default function OnboardingPage() {
         </div>
 
         <div className="max-w-2xl w-full relative z-10">
+          {/* Back/Skip Button */}
+          <div className="flex justify-between items-center mb-6">
+            <button
+              onClick={() => navigate('/')}
+              className="text-gray-400 hover:text-white flex items-center space-x-2 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back to Home</span>
+            </button>
+            <button
+              onClick={() => navigate('/trade')}
+              className="text-blink-400 hover:text-blink-300 transition-colors text-sm"
+            >
+              Skip funding, go to trade →
+            </button>
+          </div>
+
           {/* Success Header */}
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">✅</div>

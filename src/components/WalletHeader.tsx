@@ -16,6 +16,11 @@ export default function WalletHeader({ onOpenSettings }: WalletHeaderProps) {
     navigate('/')
   }
 
+  const handleHomeClick = () => {
+    logout()
+    navigate('/')
+  }
+
   const copyAddress = () => {
     if (publicKey) {
       navigator.clipboard.writeText(publicKey)
@@ -33,10 +38,15 @@ export default function WalletHeader({ onOpenSettings }: WalletHeaderProps) {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-gradient">Blink</h1>
-            <span className="text-xs bg-blink-500/20 text-blink-300 px-2 py-1 rounded-full border border-blink-500/50">
-              Beta
-            </span>
+            <button
+              onClick={handleHomeClick}
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            >
+              <h1 className="text-2xl font-bold text-gradient">Blink</h1>
+              <span className="text-xs bg-blink-500/20 text-blink-300 px-2 py-1 rounded-full border border-blink-500/50">
+                Beta
+              </span>
+            </button>
           </div>
 
           {/* Wallet Info */}
@@ -68,6 +78,15 @@ export default function WalletHeader({ onOpenSettings }: WalletHeaderProps) {
                 </div>
 
                 <div className="p-2">
+                  <button
+                    onClick={() => {
+                      handleHomeClick()
+                      setShowDropdown(false)
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded transition-colors"
+                  >
+                    🏠 Home
+                  </button>
                   <button
                     onClick={() => {
                       onOpenSettings()
