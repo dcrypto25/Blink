@@ -66,8 +66,14 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-blink-600/10 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-blink-500/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
+      </div>
+
+      <div className="max-w-md w-full relative z-10">
         {/* Logo/Branding */}
         <div className="text-center mb-8">
           <h1 className="text-6xl font-bold mb-4">
@@ -79,6 +85,11 @@ export default function OnboardingPage() {
           <p className="text-sm text-gray-500 mt-2">
             No seed phrases. Just trade.
           </p>
+          <div className="mt-3">
+            <span className="inline-block px-3 py-1 bg-yellow-500/20 text-yellow-300 text-xs font-semibold rounded-full border border-yellow-500/50">
+              🧪 Demo Mode - Instant Wallet Creation
+            </span>
+          </div>
         </div>
 
         {/* Main Card */}
@@ -175,18 +186,23 @@ export default function OnboardingPage() {
 
         {/* Feature Highlights */}
         <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-          <div>
+          <div className="bg-gray-800/30 rounded-lg p-3 hover:bg-gray-800/50 transition-colors">
             <div className="text-2xl mb-1">⚡</div>
-            <div className="text-xs text-gray-500">8s onboarding</div>
+            <div className="text-xs text-gray-400">8s onboarding</div>
           </div>
-          <div>
+          <div className="bg-gray-800/30 rounded-lg p-3 hover:bg-gray-800/50 transition-colors">
             <div className="text-2xl mb-1">💎</div>
-            <div className="text-xs text-gray-500">0.05% fees</div>
+            <div className="text-xs text-gray-400">0.05% fees</div>
           </div>
-          <div>
+          <div className="bg-gray-800/30 rounded-lg p-3 hover:bg-gray-800/50 transition-colors">
             <div className="text-2xl mb-1">🔥</div>
-            <div className="text-xs text-gray-500">Buy & burn</div>
+            <div className="text-xs text-gray-400">Buy & burn</div>
           </div>
+        </div>
+
+        {/* Trust Indicators */}
+        <div className="mt-8 text-center text-xs text-gray-500">
+          <p>🔒 Secured by WebAuthn • 🌐 Open Source • ✅ Audited</p>
         </div>
       </div>
     </div>

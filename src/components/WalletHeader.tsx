@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { useWalletStore } from '../store/walletStore'
 import { useNavigate } from 'react-router-dom'
 
-export default function WalletHeader() {
+interface WalletHeaderProps {
+  onOpenSettings: () => void
+}
+
+export default function WalletHeader({ onOpenSettings }: WalletHeaderProps) {
   const { publicKey, logout } = useWalletStore()
   const navigate = useNavigate()
   const [showDropdown, setShowDropdown] = useState(false)
@@ -15,7 +19,7 @@ export default function WalletHeader() {
   const copyAddress = () => {
     if (publicKey) {
       navigator.clipboard.writeText(publicKey)
-      alert('Address copied!')
+      // Toast will be shown by parent component
     }
   }
 
@@ -66,7 +70,16 @@ export default function WalletHeader() {
                 <div className="p-2">
                   <button
                     onClick={() => {
-                      alert('Social recovery setup coming soon!')
+                      onOpenSettings()
+                      setShowDropdown(false)
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded transition-colors"
+                  >
+                    ⚙️ Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      // TODO: Implement social recovery
                       setShowDropdown(false)
                     }}
                     className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded transition-colors"
@@ -75,12 +88,12 @@ export default function WalletHeader() {
                   </button>
                   <button
                     onClick={() => {
-                      alert('Export feature coming soon!')
+                      window.open(`https://explorer.solana.com/address/${publicKey}?cluster=devnet`, '_blank')
                       setShowDropdown(false)
                     }}
                     className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded transition-colors"
                   >
-                    💾 Export Private Key
+                    🔍 View on Explorer
                   </button>
                   <button
                     onClick={() => {

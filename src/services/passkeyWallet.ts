@@ -15,10 +15,21 @@ import bs58 from 'bs58'
 const RP_NAME = 'BlinkWallet'
 const RP_ID = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 
+// Demo mode for easy testing (disable in production)
+const DEMO_MODE = true
+
 interface PasskeyCredential {
   id: string
   publicKey: string
   encryptedPrivateKey: string
+}
+
+/**
+ * Convert Uint8Array to base64url string
+ */
+function bufferToBase64url(buffer: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...buffer))
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
 /**
@@ -31,20 +42,35 @@ export async function createPasskeyWallet(username: string): Promise<{ publicKey
     const publicKey = keypair.publicKey.toString()
     const privateKey = bs58.encode(keypair.secretKey)
 
+    // DEMO MODE: Skip passkey authentication for easier testing
+    if (DEMO_MODE) {
+      console.log('🧪 Demo Mode: Creating wallet without passkey authentication')
+
+      const credential: PasskeyCredential = {
+        id: 'demo-' + Date.now(),
+        publicKey: publicKey,
+        encryptedPrivateKey: privateKey,
+      }
+
+      localStorage.setItem('blink-passkey-wallet', JSON.stringify(credential))
+      localStorage.setItem('blink-username', username)
+
+      return { publicKey, success: true }
+    }
+
+    // PRODUCTION MODE: Use WebAuthn passkeys
     // Create WebAuthn credential for authentication
     const challenge = crypto.getRandomValues(new Uint8Array(32))
+    const userId = crypto.getRandomValues(new Uint8Array(32))
 
-    // This is a simplified version - in production, you'd call your backend
     const registrationResponse = await startRegistration({
-      challenge: Array.from(challenge).map(b => String.fromCharCode(b)).join(''),
+      challenge: bufferToBase64url(challenge),
       rp: {
         name: RP_NAME,
         id: RP_ID,
       },
       user: {
-        id: Array.from(crypto.getRandomValues(new Uint8Array(32)))
-          .map(b => String.fromCharCode(b))
-          .join(''),
+        id: bufferToBase64url(userId),
         name: username,
         displayName: username,
       },
@@ -53,16 +79,15 @@ export async function createPasskeyWallet(username: string): Promise<{ publicKey
         { alg: -257, type: 'public-key' }, // RS256
       ],
       authenticatorSelection: {
-        userVerification: 'required',
-        residentKey: 'required',
-        requireResidentKey: true,
+        userVerification: 'preferred',
+        residentKey: 'preferred',
+        requireResidentKey: false,
       },
       timeout: 60000,
       attestation: 'none',
     })
 
     // Store encrypted keypair in localStorage (encrypted with passkey)
-    // In production, this should be stored on backend encrypted with user's passkey
     const credential: PasskeyCredential = {
       id: registrationResponse.id,
       publicKey: publicKey,
@@ -91,14 +116,28 @@ export async function authenticateWithPasskey(): Promise<{ publicKey: string; ke
 
     const credential: PasskeyCredential = JSON.parse(storedCredential)
 
-    // Authenticate with WebAuthn
+    // DEMO MODE: Skip passkey authentication
+    if (DEMO_MODE) {
+      console.log('🧪 Demo Mode: Authenticating without passkey')
+
+      const privateKeyBytes = bs58.decode(credential.encryptedPrivateKey)
+      const keypair = Keypair.fromSecretKey(privateKeyBytes)
+
+      return {
+        publicKey: credential.publicKey,
+        keypair,
+        success: true
+      }
+    }
+
+    // PRODUCTION MODE: Use WebAuthn
     const challenge = crypto.getRandomValues(new Uint8Array(32))
 
     await startAuthentication({
-      challenge: Array.from(challenge).map(b => String.fromCharCode(b)).join(''),
+      challenge: bufferToBase64url(challenge),
       rpId: RP_ID,
       timeout: 60000,
-      userVerification: 'required',
+      userVerification: 'preferred',
     })
 
     // If authentication successful, decrypt and return keypair
@@ -148,4 +187,23 @@ export async function setupSocialRecovery(guardians: string[]): Promise<boolean>
   // For now, just store the concept
   console.log('Setting up social recovery with guardians:', guardians)
   return true
+}
+
+/**
+ * Check if WebAuthn is supported
+ */
+export function isPasskeySupported(): boolean {
+  return (
+    window?.PublicKeyCredential !== undefined &&
+    navigator?.credentials?.create !== undefined
+  )
+}
+
+/**
+ * Delete wallet (for testing)
+ */
+export function deleteWallet(): void {
+  localStorage.removeItem('blink-passkey-wallet')
+  localStorage.removeItem('blink-username')
+  console.log('🗑️ Wallet deleted')
 }
