@@ -480,156 +480,213 @@ function PumpFunInterface({ onSuccess, onError }: { hasZeroFees: boolean; onSucc
   )
 }
 
-// Birdeye Interface - Analytics Focus
-function BirdeyeInterface({ onSuccess, onError }: { hasZeroFees: boolean; onSuccess: (msg: string) => void; onError: (msg: string) => void }) {
-  const { balance } = useWalletStore()
-  const [fromAmount, setFromAmount] = useState('')
-  const [fromToken, setFromToken] = useState('SOL')
-  const [toToken, setToToken] = useState('USDC')
+// Birdeye Interface - Analytics Dashboard
+function BirdeyeInterface({ onSuccess }: { hasZeroFees: boolean; onSuccess: (msg: string) => void; onError: (msg: string) => void }) {
+  const [selectedToken, setSelectedToken] = useState('SOL')
+  const [timeframe, setTimeframe] = useState('24H')
 
-  const tokens = ['SOL', 'USDC', 'JUP', 'BONK']
+  const tokens = [
+    { symbol: 'SOL', price: 156.43, change: 5.2, volume: '$2.1B', liquidity: '$456M', holders: '2.8M' },
+    { symbol: 'JUP', price: 0.89, change: 12.4, volume: '$85M', liquidity: '$42M', holders: '156K' },
+    { symbol: 'BONK', price: 0.000023, change: -3.2, volume: '$45M', liquidity: '$28M', holders: '892K' },
+  ]
 
-  const handleTrade = () => {
-    if (!fromAmount || parseFloat(fromAmount) <= 0) {
-      onError('Please enter a valid amount')
-      return
-    }
-    onSuccess(`Traded ${fromAmount} ${fromToken} for ${toToken} with analytics!`)
-    setFromAmount('')
-  }
+  const selected = tokens.find(t => t.symbol === selectedToken) || tokens[0]
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-white">🐦 Birdeye Analytics</h2>
-        <span className="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded border border-cyan-500/50">
-          Real-time Data
+        <span className="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded border border-cyan-500/50 animate-pulse">
+          Live Data
         </span>
       </div>
 
-      {/* Mini Chart for Selected Pair */}
-      <div className="bg-gray-900/50 rounded-xl p-3 mb-4 border border-gray-700">
-        <div className="flex items-center justify-between mb-2">
+      {/* Token Selector */}
+      <div className="flex space-x-2">
+        {tokens.map((token) => (
+          <button
+            key={token.symbol}
+            onClick={() => setSelectedToken(token.symbol)}
+            className={`flex-1 p-3 rounded-lg transition-all ${
+              selectedToken === token.symbol
+                ? 'bg-cyan-600 border-2 border-cyan-500'
+                : 'bg-gray-700/50 border-2 border-transparent hover:bg-gray-600'
+            }`}
+          >
+            <div className="text-white font-bold text-sm">{token.symbol}</div>
+            <div className={`text-xs font-medium ${token.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {token.change >= 0 ? '+' : ''}{token.change}%
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Price Chart */}
+      <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-700">
+        <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="text-white font-bold text-sm">{fromToken}/{toToken}</h3>
-            <p className="text-lg text-green-400 font-bold">$156.43</p>
+            <h3 className="text-gray-400 text-xs font-medium">{selected.symbol}/USD</h3>
+            <p className="text-3xl text-white font-bold mt-1">${selected.price.toFixed(selected.price < 1 ? 6 : 2)}</p>
+            <p className={`text-sm font-medium mt-1 ${selected.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {selected.change >= 0 ? '+' : ''}{selected.change}% ({timeframe})
+            </p>
           </div>
           <div className="text-right text-xs text-gray-400">
-            <p className="text-green-400 font-medium">+5.2%</p>
-            <p>24h</p>
+            <p>High: ${(selected.price * 1.05).toFixed(2)}</p>
+            <p>Low: ${(selected.price * 0.95).toFixed(2)}</p>
+            <p className="text-cyan-400 mt-1">Vol: {selected.volume}</p>
           </div>
         </div>
 
-        {/* Mini Chart */}
-        <div className="h-20 bg-gradient-to-t from-cyan-500/10 to-transparent rounded relative">
-          <svg className="w-full h-full" viewBox="0 0 200 60">
+        {/* Enhanced Chart Visualization */}
+        <div className="h-40 bg-gradient-to-t from-cyan-500/10 to-transparent rounded relative mb-3">
+          <svg className="w-full h-full" viewBox="0 0 300 100">
+            {/* Grid lines */}
+            <line x1="0" y1="25" x2="300" y2="25" stroke="rgb(75, 85, 99)" strokeWidth="0.5" opacity="0.3" />
+            <line x1="0" y1="50" x2="300" y2="50" stroke="rgb(75, 85, 99)" strokeWidth="0.5" opacity="0.3" />
+            <line x1="0" y1="75" x2="300" y2="75" stroke="rgb(75, 85, 99)" strokeWidth="0.5" opacity="0.3" />
+
+            {/* Price line */}
             <polyline
-              points="0,45 25,42 50,44 75,35 100,32 125,28 150,22 175,25 200,18"
+              points="0,65 30,62 60,68 90,55 120,52 150,45 180,38 210,42 240,35 270,28 300,25"
               fill="none"
               stroke="rgb(34, 211, 238)"
-              strokeWidth="2"
+              strokeWidth="2.5"
+            />
+
+            {/* Gradient fill */}
+            <defs>
+              <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="rgb(34, 211, 238)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="rgb(34, 211, 238)" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <polygon
+              points="0,65 30,62 60,68 90,55 120,52 150,45 180,38 210,42 240,35 270,28 300,25 300,100 0,100"
+              fill="url(#chartGradient)"
             />
           </svg>
         </div>
-      </div>
 
-      {/* From Token */}
-      <div className="bg-gray-700/50 rounded-xl p-4 mb-2">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-gray-400">You Pay</span>
-          <span className="text-sm text-gray-400">Balance: {balance.toFixed(4)}</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <input
-            type="number"
-            value={fromAmount}
-            onChange={(e) => setFromAmount(e.target.value)}
-            placeholder="0.00"
-            className="flex-1 bg-transparent text-2xl text-white outline-none"
-          />
-          <select
-            value={fromToken}
-            onChange={(e) => setFromToken(e.target.value)}
-            className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors outline-none"
-          >
-            {tokens.map(token => (
-              <option key={token} value={token}>{token}</option>
-            ))}
-          </select>
+        {/* Timeframe Selector */}
+        <div className="flex justify-center space-x-2">
+          {['1H', '24H', '7D', '30D', '1Y'].map((tf) => (
+            <button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                timeframe === tf
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+            >
+              {tf}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Swap Arrow */}
-      <div className="flex justify-center -my-2 relative z-10">
-        <div className="bg-gray-800 p-2 rounded-full border-4 border-gray-900">
-          <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-          </svg>
+      {/* Market Metrics Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-gray-700/30 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-gray-400">24h Volume</p>
+            <span className="text-green-400 text-xs">↑ 12.3%</span>
+          </div>
+          <p className="text-white font-bold text-lg">{selected.volume}</p>
+        </div>
+
+        <div className="bg-gray-700/30 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-gray-400">Liquidity</p>
+            <span className="text-cyan-400 text-xs">Healthy</span>
+          </div>
+          <p className="text-white font-bold text-lg">{selected.liquidity}</p>
+        </div>
+
+        <div className="bg-gray-700/30 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-gray-400">Holders</p>
+            <span className="text-blue-400 text-xs">+2.1%</span>
+          </div>
+          <p className="text-white font-bold text-lg">{selected.holders}</p>
+        </div>
+
+        <div className="bg-gray-700/30 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-gray-400">Market Cap</p>
+            <span className="text-purple-400 text-xs">#5</span>
+          </div>
+          <p className="text-white font-bold text-lg">$28.4B</p>
         </div>
       </div>
 
-      {/* To Token */}
-      <div className="bg-gray-700/50 rounded-xl p-4 mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-gray-400">You Receive</span>
-          <span className="text-sm text-cyan-400">≈ {fromAmount ? (parseFloat(fromAmount) * 150).toFixed(2) : '0.00'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <input
-            type="text"
-            value={fromAmount ? (parseFloat(fromAmount) * 150).toFixed(2) : ''}
-            readOnly
-            placeholder="0.00"
-            className="flex-1 bg-transparent text-2xl text-white outline-none"
-          />
-          <select
-            value={toToken}
-            onChange={(e) => setToToken(e.target.value)}
-            className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors outline-none"
-          >
-            {tokens.filter(t => t !== fromToken).map(token => (
-              <option key={token} value={token}>{token}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {/* Technical Indicators */}
+      <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-700">
+        <h4 className="text-white font-semibold text-sm mb-3">📈 Technical Indicators</h4>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">RSI (14)</span>
+            <div className="flex items-center space-x-2">
+              <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-yellow-500 rounded-full" style={{ width: '42%' }}></div>
+              </div>
+              <span className="text-yellow-400 text-xs font-medium">42</span>
+            </div>
+          </div>
 
-      {/* Market Metrics */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="bg-gray-700/30 rounded-lg p-2">
-          <p className="text-xs text-gray-400">24h Volume</p>
-          <p className="text-white font-bold text-sm">$2.1B</p>
-          <p className="text-xs text-green-400">+12.3%</p>
-        </div>
-        <div className="bg-gray-700/30 rounded-lg p-2">
-          <p className="text-xs text-gray-400">Liquidity</p>
-          <p className="text-white font-bold text-sm">$456M</p>
-          <p className="text-xs text-cyan-400">Healthy</p>
-        </div>
-      </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">MACD</span>
+            <span className="text-green-400 text-xs font-medium">Bullish ↑</span>
+          </div>
 
-      {/* AI Insight */}
-      <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3 mb-4">
-        <div className="flex items-start space-x-2">
-          <span className="text-lg">📊</span>
-          <div>
-            <p className="text-cyan-300 font-medium text-xs">AI Trading Signal</p>
-            <p className="text-xs text-gray-300 mt-1">
-              Strong buy. RSI: 42 (Oversold). Volume ↑
-            </p>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">Bollinger Bands</span>
+            <span className="text-cyan-400 text-xs font-medium">Mid-range</span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">Moving Avg (50)</span>
+            <span className="text-blue-400 text-xs font-medium">Above</span>
           </div>
         </div>
       </div>
 
+      {/* AI-Powered Insights */}
+      <div className="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 border border-cyan-500/30 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0 w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center">
+            <span className="text-lg">🤖</span>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-cyan-300 font-semibold text-sm mb-1">AI Market Analysis</h4>
+            <p className="text-xs text-gray-300 leading-relaxed mb-2">
+              Strong accumulation detected. RSI shows oversold conditions with increasing volume.
+              Whale wallets increased holdings by 8.5% in last 24h.
+            </p>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30">
+                ✓ Buy Signal
+              </span>
+              <span className="text-xs text-gray-400">Confidence: 78%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Action */}
       <button
-        onClick={handleTrade}
-        className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-4 px-6 rounded-xl transition-all"
+        onClick={() => onSuccess('Analytics reviewed! Switch to Jupiter to trade.')}
+        className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center space-x-2"
       >
-        Trade with Analytics
+        <span>📊</span>
+        <span>View Full Analytics Dashboard</span>
       </button>
 
-      <p className="text-xs text-gray-500 text-center mt-3">
-        Powered by Birdeye - Real-time analytics and insights
+      <p className="text-xs text-gray-500 text-center">
+        Powered by Birdeye API • Real-time on-chain analytics
       </p>
     </div>
   )
