@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useWalletStore } from '../store/walletStore'
 import { createPasskeyWallet, authenticateWithPasskey, hasPasskeyWallet, getStoredUsername } from '../services/passkeyWallet'
 import { sanitizeUsername } from '../utils/validation'
+import Navigation from '../components/Navigation'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
@@ -271,24 +272,18 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-blink-600/10 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-blink-500/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Navigation */}
+      <Navigation />
 
-      <div className="max-w-md w-full relative z-10">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 text-gray-400 hover:text-white flex items-center space-x-2 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>Back to Home</span>
-        </button>
+      <div className="flex items-center justify-center p-4 relative overflow-hidden min-h-[calc(100vh-72px)]">
+        {/* Animated background */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-blink-600/10 rounded-full blur-3xl animate-pulse-slow"></div>
+          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-blink-500/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
+        </div>
+
+        <div className="max-w-md w-full relative z-10">
 
         {/* Logo/Branding */}
         <div className="text-center mb-8">
@@ -463,6 +458,7 @@ export default function OnboardingPage() {
         <div className="mt-8 text-center text-xs text-gray-500">
           <p>🔒 Secured by WebAuthn • 🌐 Open Source • ✅ Audited</p>
         </div>
+      </div>
       </div>
     </div>
   )

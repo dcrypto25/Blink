@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useWalletStore } from '../store/walletStore'
+import Navigation from '../components/Navigation'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -12,6 +13,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Navigation */}
+      <Navigation />
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         {/* Animated background */}
@@ -19,24 +23,6 @@ export default function HomePage() {
           <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-blink-600/10 rounded-full blur-3xl animate-pulse-slow"></div>
           <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-blink-500/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
         </div>
-
-        {/* Navigation */}
-        <nav className="relative z-10 container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <h1 className="text-3xl font-bold text-gradient">Blink</h1>
-              <span className="text-xs bg-blink-500/20 text-blink-300 px-2 py-1 rounded-full border border-blink-500/50">
-                Beta
-              </span>
-            </div>
-            <button
-              onClick={() => navigate('/onboard')}
-              className="bg-gradient-to-r from-blink-500 to-blink-600 hover:from-blink-600 hover:to-blink-700 text-white font-semibold py-2 px-6 rounded-lg transition-all glow"
-            >
-              Get Started
-            </button>
-          </div>
-        </nav>
 
         {/* Hero Content */}
         <div className="relative z-10 container mx-auto px-4 py-20 text-center">
