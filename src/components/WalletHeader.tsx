@@ -41,7 +41,7 @@ export default function WalletHeader({ onOpenSettings }: WalletHeaderProps) {
         onClose={() => setShowFundingModal(false)}
       />
 
-      <header className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700">
+      <header className="relative z-50 bg-gray-800/50 backdrop-blur-sm border-b border-gray-700">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -54,6 +54,19 @@ export default function WalletHeader({ onOpenSettings }: WalletHeaderProps) {
                 <span className="text-xs bg-blink-500/20 text-blink-300 px-2 py-1 rounded-full border border-blink-500/50">
                   Beta
                 </span>
+              </button>
+            </div>
+
+            {/* Center - Fund Wallet Button */}
+            <div className="flex-1 flex justify-center">
+              <button
+                onClick={() => setShowFundingModal(true)}
+                className="hidden md:flex items-center space-x-2 px-4 py-2 bg-blink-600/10 hover:bg-blink-600/20 border border-blink-500/30 hover:border-blink-500/50 text-blink-300 hover:text-blink-200 rounded-lg transition-all font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Fund Wallet</span>
               </button>
             </div>
 
@@ -73,7 +86,7 @@ export default function WalletHeader({ onOpenSettings }: WalletHeaderProps) {
               </button>
 
               {showDropdown && (
-                <div className="absolute right-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 overflow-hidden z-50">
+                <div className="absolute right-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 overflow-hidden z-[100]">
                   <div className="p-4 border-b border-gray-700">
                     <p className="text-xs text-gray-400 mb-1">Your Address</p>
                     <p className="text-white font-mono text-xs break-all">{publicKey}</p>
